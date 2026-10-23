@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сюрприз 🎁</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #ffd6e8, #d6e4ff);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  #btn {
+    font-size: clamp(22px, 6vw, 40px); font-weight: 700;
+    padding: .8em 1.6em; border: none; border-radius: 999px;
+    background: #ff5fa2; color: #fff; cursor: pointer;
+    box-shadow: 0 10px 30px rgba(255, 95, 162, .45);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { transform: scale(1.08); } }
+  #x {
+    display: none; position: fixed; inset: 0;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(circle at 50% 40%, #1d2b1d, #050805); color: #39ff6a;
+    font-family: "Courier New", monospace; padding: 16px;
+    text-shadow: 0 0 18px rgba(57, 255, 106, .7);
+  }
+  #x.on { display: flex; }
+  #t { font-size: clamp(48px, 14vw, 180px); font-weight: 900; line-height: 1; animation: shake .25s linear infinite; }
+  #e { font-size: clamp(56px, 16vw, 200px); margin-top: .2em; }
+  .f { position: fixed; font-size: clamp(28px, 7vw, 64px); animation: fly linear infinite; pointer-events: none; }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(-6px, 4px) rotate(-1deg); }
+    75% { transform: translate(6px, -4px) rotate(1deg); }
+  }
+  @keyframes fly { from { transform: translateY(110vh) rotate(0); } to { transform: translateY(-20vh) rotate(360deg); } }
+</style>
+</head>
+<body>
+<button id="btn">нажми меня 🥺</button>
+<div id="x"><div id="t"></div><div id="e"></div></div>
+<script>
+  const d = s => new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)).reverse());
+  const k = ['ndCe0JjQn9Co0CCc0JjQodCa0JDQnNA=', 'jpSf8I+477WVn/A=', 'ppSf8CyPuO+Cl5/wLLiTn/AskKef8CyopJ/wLICRn/AsjpSf8CyPuO+1lZ/w'];
+  function drop() {
+    const A = window.AudioContext || window.webkitAudioContext;
+    if (!A) return;
+    const ac = new A();
+    const out = ac.createDynamicsCompressor();
+    out.connect(ac.destination);
+    const noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const nd = noise.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+    const kick = t => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.setValueAtTime(150, t);
+      o.frequency.exponentialRampToValueAtTime(40, t + .15);
+      g.gain.setValueAtTime(1, t);
+      g.gain.exponentialRampToValueAtTime(.001, t + .4);
+      o.connect(g).connect(out); o.start(t); o.stop(t + .4);
+    };
+    const hit = (t, len, freq, vol) => {
+      const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      s.buffer = noise; f.type = 'highpass'; f.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(.001, t + len);
+      s.connect(f).connect(g).connect(out); s.start(t); s.stop(t + len);
+    };
+    const wob = (t, len, note, rate) => {
+      const o1 = ac.createOscillator(), o2 = ac.createOscillator();
+      const f = ac.createBiquadFilter(), g = ac.createGain();
+      const lfo = ac.createOscillator(), lg = ac.createGain();
+      o1.type = 'sawtooth'; o2.type = 'square';
+      o1.frequency.value = note; o2.frequency.value = note * 1.005;
+      f.type = 'lowpass'; f.Q.value = 12; f.frequency.value = 700;
+      lfo.type = 'sine'; lfo.frequency.value = rate; lg.gain.value = 650;
+      lfo.connect(lg).connect(f.frequency);
+      g.gain.setValueAtTime(.35, t);
+      g.gain.setValueAtTime(.35, t + len - .02);
+      g.gain.linearRampToValueAtTime(0, t + len);
+      o1.connect(f); o2.connect(f); f.connect(g).connect(out);
+      [o1, o2, lfo].forEach(o => { o.start(t); o.stop(t + len); });
+    };
+
+    const beat = 60 / 140, bar = beat * 4;
+    const notes = [82.4, 82.4, 98, 73.4];
+    const rates = [140 / 60 * 2, 140 / 60 * 3, 140 / 60 * 4, 140 / 60];
+    let next = ac.currentTime + .05, n = 0;
+    const plan = () => {
+      while (next < ac.currentTime + .5) {
+        const t = next;
+        kick(t); kick(t + beat * 2.5);
+        hit(t + beat * 2, .25, 1500, .7);
+        for (let i = 0; i < 8; i++) hit(t + i * beat / 2, .05, 8000, .15);
+        wob(t, bar / 2, notes[n % 4], rates[n % 4]);
+        wob(t + bar / 2, bar / 2, notes[(n + 1) % 4], rates[(n + 2) % 4]);
+        next += bar; n++;
+      }
+    };
+    plan();
+    setInterval(plan, 200);
+  }
+
+  document.getElementById('btn').addEventListener('click', () => {
+    drop();
+    const el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+    document.getElementById('t').textContent = d(k[0]);
+    document.getElementById('e').textContent = d(k[1]);
+    document.getElementById('btn').remove();
+    const x = document.getElementById('x');
+    x.classList.add('on');
+    const em = d(k[2]).split(',');
+    for (let i = 0; i < 18; i++) {
+      const s = document.createElement('span');
+      s.className = 'f';
+      s.textContent = em[i % em.length];
+      s.style.left = Math.random() * 95 + 'vw';
+      s.style.animationDuration = 4 + Math.random() * 5 + 's';
+      s.style.animationDelay = -Math.random() * 8 + 's';
+      x.appendChild(s);
+    }
+  });
+</script>
+</body>
+</html>
